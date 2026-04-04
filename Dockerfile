@@ -32,7 +32,7 @@ RUN rm -rf .next/cache
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store CI=true pnpm install --prod --frozen-lockfile
 
 ## Final stage: LSIO base image with compiled Seerr
-FROM ghcr.io/linuxserver/baseimage-alpine:3.19
+FROM ghcr.io/linuxserver/baseimage-alpine:3.21
 
 ARG COMMIT_TAG
 ENV COMMIT_TAG=${COMMIT_TAG}

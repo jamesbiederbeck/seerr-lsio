@@ -1,5 +1,20 @@
 #!/usr/bin/with-contenv bash
 
+cat << 'EOF'
+
+  ███████╗███████╗███████╗██████╗ ██████╗
+  ██╔════╝██╔════╝██╔════╝██╔══██╗██╔══██╗
+  ███████╗█████╗  █████╗  ██████╔╝██████╔╝
+  ╚════██║██╔══╝  ██╔══╝  ██╔══██╗██╔══██╗
+  ███████║███████╗███████╗██║  ██║██║  ██║
+  ╚══════╝╚══════╝╚══════╝╚═╝  ╚═╝╚═╝  ╚═╝
+         [ Unofficial LSIO Edition ]
+
+  ⚠  NOT affiliated with the Seerr project
+     or LinuxServer.io (lsio).
+
+EOF
+
 # Ensure /config directory exists
 if [[ ! -d /config ]]; then
   mkdir -p /config
