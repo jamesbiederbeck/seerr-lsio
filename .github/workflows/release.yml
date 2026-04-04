@@ -116,8 +116,6 @@ jobs:
     permissions:
       contents: read
       packages: write
-    outputs:
-      image_digest: ${{ steps.digests.outputs.IMAGE_DIGEST }}
     env:
       VERSION: ${{ github.ref_name }}
     steps:
@@ -180,12 +178,6 @@ jobs:
           cache-to: type=gha,mode=max
           provenance: false
 
-      - name: Resolve manifest digest
-        id: digests
-        run: |
-          DIGEST=$(docker buildx imagetools inspect "ghcr.io/${{ github.repository }}:${{ env.VERSION }}" --format '{{json .Manifest.Digest}}' | tr -d '"')
-          echo "IMAGE_DIGEST=$DIGEST" >> $GITHUB_OUTPUT
-
       - name: Also tag :latest (non-pre-release only)
         shell: bash
         if: ${{ !contains(env.VERSION, '-') }}
@@ -194,88 +186,9 @@ jobs:
             -t ghcr.io/${{ github.repository }}:latest \
             ghcr.io/${{ github.repository }}:${{ env.VERSION }}
 
-  sign:
-    name: Sign images and create SBOM attestations
-    needs: publish
-    runs-on: ubuntu-24.04
-    permissions:
-      contents: read
-      id-token: write
-      packages: write
-    env:
-      VERSION: ${{ github.ref_name }}
-      COSIGN_YES: 'true'
-    steps:
-      - name: Checkout
-        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
-        with:
-          persist-credentials: false
-
-      - name: Install Cosign
-        uses: sigstore/cosign-installer@ba7bc0a3fef59531c69a25acd34668d6d3fe6f22 # v4.1.0
-
-      - name: Install Trivy
-        uses: aquasecurity/setup-trivy@3fb12ec12f41e471780db15c232d5dd185dcb514 # v0.2.5
-
-      - name: Log in to GitHub Container Registry
-        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3.7.0
-        with:
-          registry: ghcr.io
-          username: ${{ github.repository_owner }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Sign images
-        run: |
-          cosign sign --recursive "ghcr.io/${{ github.repository }}@${{ needs.publish.outputs.image_digest }}"
-
-      - name: Generate SBOMs
-        run: |
-          trivy image --format cyclonedx --output seerr-image-${{ env.VERSION }}.sbom \
-            "ghcr.io/${{ github.repository }}@${{ needs.publish.outputs.image_digest }}"
-
-      - name: Attest SBOMs
-        run: |
-          cosign attest \
-            --type cyclonedx \
-            --predicate seerr-image-${{ env.VERSION }}.sbom \
-            "ghcr.io/${{ github.repository }}@${{ needs.publish.outputs.image_digest }}"
-
-      - name: Upload SBOMs
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        with:
-          name: sboms-${{ env.VERSION }}
-          path: '*.sbom'
-          if-no-files-found: error
-          retention-days: 1
-
-  verify:
-    name: Verify signatures and attestations
-    needs: [publish, sign]
-    runs-on: ubuntu-24.04
-    permissions:
-      contents: read
-    env:
-      VERSION: ${{ github.ref_name }}
-    steps:
-      - name: Install Cosign
-        uses: sigstore/cosign-installer@ba7bc0a3fef59531c69a25acd34668d6d3fe6f22 # v4.1.0
-
-      - name: Verify signatures
-        run: |
-          cosign verify "ghcr.io/${{ github.repository }}@${{ needs.publish.outputs.image_digest }}" \
-            --certificate-identity "https://github.com/${{ github.workflow_ref }}" \
-            --certificate-oidc-issuer "https://token.actions.githubusercontent.com"
-
-      # - name: Verify attestations
-      #   run: |
-      #     cosign verify-attestation "ghcr.io/${{ github.repository }}@${{ needs.publish.outputs.image_digest }}" \
-      #       --type cyclonedx \
-      #       --certificate-identity "https://github.com/${{ github.workflow_ref }}" \
-      #       --certificate-oidc-issuer "https://token.actions.githubusercontent.com" > /dev/null
-
   publish-release:
     name: Publish release
-    needs: [create-draft-release, verify]
+    needs: [create-draft-release, publish]
     runs-on: ubuntu-24.04
     permissions:
       contents: write
