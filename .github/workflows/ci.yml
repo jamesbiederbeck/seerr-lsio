@@ -20,6 +20,8 @@ concurrency:
 
 jobs:
   build:
+    # Runs on all events including PRs to validate the Dockerfile builds successfully.
+    # Images are only pushed on merges to develop (see the publish job below).
     name: Build (per-arch, native runners)
     strategy:
       matrix:
