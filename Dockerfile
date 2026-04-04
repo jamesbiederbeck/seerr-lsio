@@ -1,22 +1,14 @@
-FROM node:22.22.1-alpine3.22@sha256:9f96f09f127f06feaff1e7faa4a34a3020cf5c1138c988782e59959641facabe AS base
-ARG SOURCE_DATE_EPOCH
+## Build stage: compile Seerr from source
+FROM node:22.22.1-alpine3.22@sha256:9f96f09f127f06feaff1e7faa4a34a3020cf5c1138c988782e59959641facabe AS build
+
 ARG TARGETPLATFORM
 ENV TARGETPLATFORM=${TARGETPLATFORM:-linux/amd64}
+ARG COMMIT_TAG
+ENV COMMIT_TAG=${COMMIT_TAG}
 
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
 RUN corepack enable
-
-COPY . ./app
-WORKDIR /app
-
-FROM base AS prod-deps
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store CI=true pnpm install --prod --frozen-lockfile
-
-FROM base AS build
-
-ARG COMMIT_TAG
-ENV COMMIT_TAG=${COMMIT_TAG}
 
 RUN \
   case "${TARGETPLATFORM}" in \
@@ -27,32 +19,54 @@ RUN \
   ;; \
   esac
 
+WORKDIR /app
+
+COPY . .
+
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store CYPRESS_INSTALL_BINARY=0 pnpm install --frozen-lockfile
 
 RUN pnpm build
 
 RUN rm -rf .next/cache
 
-FROM node:22.22.1-alpine3.22@sha256:9f96f09f127f06feaff1e7faa4a34a3020cf5c1138c988782e59959641facabe
-ARG SOURCE_DATE_EPOCH
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store CI=true pnpm install --prod --frozen-lockfile
+
+## Final stage: LSIO base image with compiled Seerr
+FROM ghcr.io/linuxserver/baseimage-alpine:3.19
+
 ARG COMMIT_TAG
-ENV NODE_ENV=production
 ENV COMMIT_TAG=${COMMIT_TAG}
 
-RUN apk add --no-cache tzdata
+LABEL org.opencontainers.image.title="Seerr" \
+      org.opencontainers.image.description="Free and open source software application for managing requests for your media library" \
+      org.opencontainers.image.source="https://github.com/jamesbiederbeck/seerr-lsio" \
+      org.opencontainers.image.licenses="MIT"
 
-USER node:node
+ENV APP_NAME="seerr"
+
+RUN apk add --no-cache \
+  nodejs \
+  npm \
+  curl \
+  bash \
+  sqlite \
+  tzdata
 
 WORKDIR /app
 
-COPY --chown=node:node . .
-COPY --chown=node:node --from=prod-deps /app/node_modules ./node_modules
-COPY --chown=node:node --from=build /app/.next ./.next
-COPY --chown=node:node --from=build /app/dist ./dist
+COPY root/ /
 
-RUN touch config/DOCKER && \
-  echo "{\"commitTag\": \"${COMMIT_TAG}\"}" > committag.json
+COPY --from=build /app/node_modules /app/seerr/node_modules
+COPY --from=build /app/.next /app/seerr/.next
+COPY --from=build /app/dist /app/seerr/dist
+COPY --from=build /app/public /app/seerr/public
+COPY --from=build /app/package.json /app/seerr/package.json
+
+RUN echo "{\"commitTag\": \"${COMMIT_TAG}\"}" > /app/seerr/committag.json
 
 EXPOSE 5055
 
-CMD [ "npm", "start" ]
+VOLUME /config
+
+HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
+  CMD curl --fail http://localhost:5055/api/v1/status || exit 1
