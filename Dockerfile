@@ -1,5 +1,8 @@
 ## Build stage: compile Seerr from source
-FROM node:22.22.1-alpine3.22@sha256:9f96f09f127f06feaff1e7faa4a34a3020cf5c1138c988782e59959641facabe AS build
+ARG BASEIMAGE_VERSION=3.21
+ARG NODE_VERSION=22.22.1
+
+FROM node:${NODE_VERSION}-alpine3.22@sha256:9f96f09f127f06feaff1e7faa4a34a3020cf5c1138c988782e59959641facabe AS build
 
 ARG TARGETPLATFORM
 ENV TARGETPLATFORM=${TARGETPLATFORM:-linux/amd64}
@@ -32,8 +35,10 @@ RUN rm -rf .next/cache
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store CI=true pnpm install --prod --frozen-lockfile
 
 ## Final stage: LSIO base image with compiled Seerr
-FROM ghcr.io/linuxserver/baseimage-alpine:3.21
+FROM ghcr.io/linuxserver/baseimage-alpine:${BASEIMAGE_VERSION}
 
+ARG BASEIMAGE_VERSION=3.21
+ARG NODE_VERSION=22.22.1
 ARG COMMIT_TAG
 ENV COMMIT_TAG=${COMMIT_TAG}
 
@@ -45,7 +50,7 @@ LABEL org.opencontainers.image.title="Seerr" \
 ENV APP_NAME="seerr"
 
 RUN apk add --no-cache \
-  nodejs \
+  "nodejs=${NODE_VERSION}-r0" \
   npm \
   curl \
   bash \
@@ -65,6 +70,8 @@ COPY --from=build /app/package.json /app/seerr/package.json
 RUN echo "{\"commitTag\": \"${COMMIT_TAG}\"}" > /app/seerr/committag.json
 
 EXPOSE 5055
+
+STOPSIGNAL SIGTERM
 
 VOLUME /config
 

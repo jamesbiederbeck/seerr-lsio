@@ -26,6 +26,11 @@ mkdir -p \
   /config/cache/images \
   /config/db
 
+# Bootstrap default settings if not already present
+if [[ ! -f /config/settings.json ]] && [[ -f /app/seerr/defaults/settings.json ]]; then
+  cp /app/seerr/defaults/settings.json /config/
+fi
+
 # Ensure Seerr detects Docker mode (checked at startup via CONFIG_DIRECTORY/DOCKER)
 touch /config/DOCKER 2>/dev/null || true
 
