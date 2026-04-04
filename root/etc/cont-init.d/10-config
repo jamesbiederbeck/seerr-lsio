@@ -1,0 +1,44 @@
+#!/usr/bin/with-contenv bash
+
+cat << 'EOF'
+
+  ███████╗███████╗███████╗██████╗ ██████╗
+  ██╔════╝██╔════╝██╔════╝██╔══██╗██╔══██╗
+  ███████╗█████╗  █████╗  ██████╔╝██████╔╝
+  ╚════██║██╔══╝  ██╔══╝  ██╔══██╗██╔══██╗
+  ███████║███████╗███████╗██║  ██║██║  ██║
+  ╚══════╝╚══════╝╚══════╝╚═╝  ╚═╝╚═╝  ╚═╝
+         [ Unofficial LSIO Edition ]
+
+  ⚠  NOT affiliated with the Seerr project
+     or LinuxServer.io (lsio).
+
+EOF
+
+# Ensure /config directory exists
+if [[ ! -d /config ]]; then
+  mkdir -p /config
+fi
+
+# Create required subdirectories
+mkdir -p \
+  /config/logs \
+  /config/cache/images \
+  /config/db
+
+# Bootstrap default settings if not already present
+if [[ ! -f /config/settings.json ]] && [[ -f /app/seerr/defaults/settings.json ]]; then
+  cp /app/seerr/defaults/settings.json /config/
+fi
+
+# Ensure Seerr detects Docker mode (checked at startup via CONFIG_DIRECTORY/DOCKER)
+touch /config/DOCKER 2>/dev/null || true
+
+# Set ownership recursively to PUID/PGID (abc user)
+lsiown -R abc:abc /config
+
+# Validate write permissions
+if [[ ! -w /config ]]; then
+  echo "ERROR: /config is not writable. Check your volume permissions."
+  exit 1
+fi

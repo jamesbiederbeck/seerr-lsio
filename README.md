@@ -1,6 +1,11 @@
 <p align="center">
 <img src="./public/logo_full.svg" alt="Seerr" style="margin: 20px 0;">
 </p>
+
+> **⚠️ Disclaimer:** This repository (`seerr-lsio`) is an **unofficial**, community-maintained Docker image packaging for [Seerr](https://github.com/seerr-team/seerr).
+> It is **not affiliated with, endorsed by, or supported by** the Seerr project team or [LinuxServer.io](https://www.linuxserver.io/).
+> For official support, please visit the upstream projects directly.
+
 <p align="center">
 <img src="https://github.com/seerr-team/seerr/actions/workflows/release.yml/badge.svg" alt="Seerr Release" />
 <img src="https://github.com/seerr-team/seerr/actions/workflows/ci.yml/badge.svg" alt="Seerr CI">
