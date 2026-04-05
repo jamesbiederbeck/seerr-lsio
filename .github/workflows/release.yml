@@ -42,7 +42,7 @@ jobs:
         uses: orhun/git-cliff-action@c93ef52f3d0ddcdcc9bd5447d98d458a11cd4f72 # v4.7.1
         with:
           config: .github/cliff.toml
-          args: -vv --tag ${{ env.VERSION }}
+          args: -vv --tag ${{ env.VERSION }} --unreleased
         env:
           OUTPUT: CHANGELOG.md
           GITHUB_REPO: ${{ github.repository }}
@@ -60,7 +60,9 @@ jobs:
           persist-credentials: false
 
       - name: Draft Release
-        run: gh release create "${VERSION}" -t "Release ${VERSION}" -n "${RELEASE_BODY}" --draft
+        run: |
+          printf '%s' "${RELEASE_BODY}" > /tmp/release_notes.md
+          gh release create "${VERSION}" -t "Release ${VERSION}" --notes-file /tmp/release_notes.md --draft
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RELEASE_BODY: ${{ needs.changelog.outputs.release_body }}
