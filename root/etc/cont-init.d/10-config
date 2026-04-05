@@ -34,8 +34,9 @@ fi
 # Ensure Seerr detects Docker mode (checked at startup via CONFIG_DIRECTORY/DOCKER)
 touch /config/DOCKER 2>/dev/null || true
 
-# Set ownership recursively to PUID/PGID (abc user)
-lsiown -R abc:abc /config
+# Set ownership recursively to PUID/PGID
+# Use explicit chown with env vars instead of lsiown to ensure subdirs are covered
+chown -R "${PUID:-911}:${PGID:-911}" /config
 
 # Validate write permissions
 if [[ ! -w /config ]]; then

@@ -3,5 +3,6 @@
 export NODE_ENV=production
 export CONFIG_DIRECTORY=/config
 
+cd /app/seerr
 exec s6-setuidgid abc \
-  node /app/seerr/dist/index.js
+  node dist/index.js

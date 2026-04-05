@@ -66,6 +66,7 @@ COPY --from=build /app/.next /app/seerr/.next
 COPY --from=build /app/dist /app/seerr/dist
 COPY --from=build /app/public /app/seerr/public
 COPY --from=build /app/package.json /app/seerr/package.json
+COPY --from=build /app/seerr-api.yml /app/seerr/seerr-api.yml
 
 RUN echo "{\"commitTag\": \"${COMMIT_TAG}\"}" > /app/seerr/committag.json
 
