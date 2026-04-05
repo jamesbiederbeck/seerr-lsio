@@ -15,34 +15,29 @@ concurrency:
 jobs:
   determine-tag-version:
     name: Determine tag version
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/develop'
     runs-on: ubuntu-24.04
     permissions:
       contents: read
     outputs:
-      tag_version: ${{ steps.git-cliff.outputs.tag_version }}
+      tag_version: ${{ steps.resolve-version.outputs.tag_version }}
     steps:
       - name: Checkout
         uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
         with:
-          fetch-depth: 0
           persist-credentials: false
 
-      - name: Install git-cliff
-        uses: taiki-e/install-action@a37010ded18ff788be4440302bd6830b1ae50d8b # v2.68.25
-        with:
-          tool: git-cliff
-
-      - name: Get tag version
-        id: git-cliff
+      - name: Resolve version from package_versions.txt
+        id: resolve-version
         run: |
-          tag_version=$(git-cliff -c .github/cliff.toml --bumped-version --unreleased)
-          echo "Next tag version is ${tag_version}"
+          source package_versions.txt
+          tag_version="v${SEERR_VERSION}.${IMAGE_REVISION}"
+          echo "Tagging as ${tag_version} (from package_versions.txt)"
           echo "tag_version=${tag_version}" >> "$GITHUB_OUTPUT"
 
   create-tag:
     name: Create tag
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/develop'
     runs-on: ubuntu-24.04
     permissions:
       contents: write
@@ -73,7 +68,7 @@ jobs:
           git config --global user.email "${{ github.actor }}@users.noreply.github.com"
 
       - name: Bump package.json
-        run: npm version ${TAG_VERSION} --no-commit-hooks --no-git-tag-version
+        run: npm pkg set version="${TAG_VERSION#v}"
 
       - name: Commit updated files
         run: |

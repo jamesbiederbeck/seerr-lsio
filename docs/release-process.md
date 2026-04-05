@@ -10,25 +10,44 @@ This document describes how releases are published for `seerr-lsio`.
 
 | Branch    | Purpose                                                             |
 |-----------|---------------------------------------------------------------------|
-| `main`    | Stable releases only                                                |
 | `develop` | Integration branch; Docker images tagged `:develop` are published on every merge |
+
+## Versioning
+
+Image versions follow a four-part scheme: `vMAJOR.MINOR.PATCH.MICRO`
+
+- `MAJOR.MINOR.PATCH` — mirrors the upstream [Seerr](https://github.com/seerr-team/seerr) release version
+- `MICRO` — image revision counter, incremented for packaging-only changes against the same upstream version; reset to `0` when the upstream version changes
+
+Both values are tracked in `package_versions.txt`:
+
+| Variable          | Description                                            |
+|-------------------|--------------------------------------------------------|
+| `SEERR_VERSION`   | Upstream Seerr version being packaged (e.g. `1.2.3`)  |
+| `IMAGE_REVISION`  | Image revision for this upstream version (e.g. `0`)   |
+
+**Example tags:** `v1.2.3.0` (initial packaging of Seerr 1.2.3), `v1.2.3.1` (packaging fix, same upstream)
 
 ## Release Workflow
 
-Releases follow [Semantic Versioning](https://semver.org/) and are triggered automatically when a version tag is pushed to `main`.
+### 1. Update version pins
 
-### 1. Merge changes into `main`
+Edit `package_versions.txt` and set the appropriate values:
 
-Ensure all desired changes are merged into the `main` branch.
+- **Tracking a new upstream Seerr release:** bump `SEERR_VERSION` to match the upstream tag, reset `IMAGE_REVISION` to `0`
+- **Packaging-only fix (no upstream change):** increment `IMAGE_REVISION`
+
+Commit and merge the change into `develop`.
 
 ### 2. Create a tag
 
-Run the **Create tag** workflow (`create-tag.yml`) manually from the [GitHub Actions](../../actions/workflows/create-tag.yml) tab. This workflow:
+Run the **Create tag** workflow (`create-tag.yml`) manually from the [GitHub Actions](../../actions/workflows/create-tag.yml) tab on the `develop` branch. This workflow:
 
-1. Determines the next semantic version from commit history using [`git-cliff`](https://git-cliff.org/)
-2. Bumps the version in `package.json`
-3. Commits and pushes the version bump to `main`
-4. Creates and pushes the version tag (e.g. `v1.2.3`)
+1. Reads `SEERR_VERSION` and `IMAGE_REVISION` from `package_versions.txt`
+2. Composes the tag as `v${SEERR_VERSION}.${IMAGE_REVISION}`
+3. Writes the version to `package.json`
+4. Commits and pushes the version bump to `develop`
+5. Creates and pushes the version tag (e.g. `v1.2.3.0`)
 
 ### 3. Automated release pipeline
 
@@ -44,7 +63,7 @@ Pushing a `v*` tag triggers the **Seerr Release** workflow (`release.yml`) autom
 
 Published image tags:
 
-- `ghcr.io/jamesbiederbeck/seerr-lsio:<version>` — e.g. `v1.2.3`
+- `ghcr.io/jamesbiederbeck/seerr-lsio:<version>` — e.g. `v1.2.3.0`
 - `ghcr.io/jamesbiederbeck/seerr-lsio:latest` — stable releases only (no `-` in version)
 
 ## Preview Releases
@@ -69,11 +88,11 @@ These are suitable for testing but are not intended for production use.
 
 ## Image Version Pins
 
-The `package_versions.txt` file in the repository root controls which base image and Node.js versions are used in the Docker build:
+The `package_versions.txt` file in the repository root controls all version pins used in the Docker build:
 
-| Variable            | Description                              |
-|---------------------|------------------------------------------|
-| `BASEIMAGE_VERSION` | LinuxServer.io Alpine base image version |
-| `NODE_VERSION`      | Node.js version pinned in Alpine APK     |
-
-Update these values when you want to upgrade the base image or Node.js version.
+| Variable            | Description                                            |
+|---------------------|--------------------------------------------------------|
+| `SEERR_VERSION`     | Upstream Seerr version being packaged                  |
+| `IMAGE_REVISION`    | Image revision for this upstream version               |
+| `BASEIMAGE_VERSION` | LinuxServer.io Alpine base image version               |
+| `NODE_VERSION`      | Node.js version pinned in Alpine APK                   |
