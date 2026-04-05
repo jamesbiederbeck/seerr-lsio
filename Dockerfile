@@ -38,7 +38,7 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store CI=true pnpm install --prod --
 FROM ghcr.io/linuxserver/baseimage-alpine:${BASEIMAGE_VERSION}
 
 ARG BASEIMAGE_VERSION=3.21
-ARG NODE_VERSION=22.22.1
+ARG ALPINE_NODE_VERSION
 ARG COMMIT_TAG
 ENV COMMIT_TAG=${COMMIT_TAG}
 
@@ -50,7 +50,7 @@ LABEL org.opencontainers.image.title="Seerr" \
 ENV APP_NAME="seerr"
 
 RUN apk add --no-cache \
-  "nodejs=${NODE_VERSION}-r0" \
+  "nodejs=${ALPINE_NODE_VERSION}" \
   npm \
   curl \
   bash \
